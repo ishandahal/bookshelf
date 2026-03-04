@@ -1,6 +1,8 @@
 import sqlite3
 from pathlib import Path
 
+from bookshelf.models import Book
+
 
 def init_db(db_path: Path) -> None:
     """Create the bookshelf database and books table if they don't exist.
@@ -24,3 +26,28 @@ def init_db(db_path: Path) -> None:
     """)
     conn.commit()
     conn.close()
+
+
+def add_book(db_path: Path, book: Book) -> int:
+    """Insert a book into the database.
+
+    Args:
+        db_path: Path to the SQLite database file.
+        book: Book instance to insert.
+
+    Returns:
+        The ID of the newly inserted book.
+    """
+    conn = sqlite3.connect(db_path)
+    cursor = conn.execute(
+        """
+        INSERT INTO books (title, author, status, genre, notes, source, added_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        """,
+        (book.title, book.author, book.status, book.genre,
+         book.notes, book.source, book.added_at, book.updated_at),
+    )
+    conn.commit()
+    book_id = cursor.lastrowid
+    conn.close()
+    return book_id
