@@ -51,3 +51,58 @@ def add_book(db_path: Path, book: Book) -> int:
     book_id = cursor.lastrowid
     conn.close()
     return book_id
+
+SORTABLE_COLUMNS = {"title", "author", "status", "genre", "added_at", "updated_at"}
+
+
+def list_books(
+    db_path: Path,
+    status: str | None = None,
+    genre: str | None = None,
+    sort_by: str = "added_at",
+) -> list[Book]:
+    """Fetch books from the database with optional filters and sorting.
+
+    Args:
+        db_path: Path to the SQLite database file.
+        status: Filter by status if provided.
+        genre: Filter by genre if provided.
+        sort_by: Column name to sort results by.
+
+    Returns:
+        List of matching Book instances.
+
+    Raises:
+        ValueError: If sort_by is not a valid column name.
+    """
+    if sort_by not in SORTABLE_COLUMNS:
+        raise ValueError(f"Invalid sort column: {sort_by}")
+
+    query = "SELECT id, title, author, status, genre, notes, source, added_at, updated_at FROM books"
+    conditions = []
+    params = []
+
+    if status is not None:
+        conditions.append("status = ?")
+        params.append(status)
+    if genre is not None:
+        conditions.append("genre = ?")
+        params.append(genre)
+
+    if conditions:
+        query += " WHERE " + " AND ".join(conditions)
+
+    query += f" ORDER BY {sort_by}"
+
+    conn = sqlite3.connect(db_path)
+    rows = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return [
+        Book(
+            id=row[0], title=row[1], author=row[2], status=row[3],
+            genre=row[4], notes=row[5], source=row[6],
+            added_at=row[7], updated_at=row[8],
+        )
+        for row in rows
+    ]

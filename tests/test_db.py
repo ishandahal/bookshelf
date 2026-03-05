@@ -1,7 +1,7 @@
 import sqlite3
 from pathlib import Path
 
-from bookshelf.db import add_book, init_db
+from bookshelf.db import add_book, init_db, list_books
 from bookshelf.models import Book
 
 
@@ -40,3 +40,51 @@ def test_add_book_persists_data(tmp_path: Path):
     conn.close()
 
     assert row == ("Dune", "Frank Herbert", "sci-fi")
+
+
+def test_list_books_returns_all(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    init_db(db_path)
+    add_book(db_path, Book(title="Dune", author="Frank Herbert"))
+    add_book(db_path, Book(title="Neuromancer", author="William Gibson"))
+
+    books = list_books(db_path)
+
+    assert len(books) == 2
+    assert all(isinstance(b, Book) for b in books)
+
+
+def test_list_books_filters_by_status(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    init_db(db_path)
+    add_book(db_path, Book(title="Dune", author="Frank Herbert", status="read"))
+    add_book(db_path, Book(title="Neuromancer", author="William Gibson"))
+
+    books = list_books(db_path, status="read")
+
+    assert len(books) == 1
+    assert books[0].title == "Dune"
+
+
+def test_list_books_filters_by_genre(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    init_db(db_path)
+    add_book(db_path, Book(title="Dune", author="Frank Herbert", genre="sci-fi"))
+    add_book(db_path, Book(title="1984", author="George Orwell", genre="dystopian"))
+
+    books = list_books(db_path, genre="sci-fi")
+
+    assert len(books) == 1
+    assert books[0].title == "Dune"
+
+
+def test_list_books_sorts_by_column(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    init_db(db_path)
+    add_book(db_path, Book(title="Neuromancer", author="William Gibson"))
+    add_book(db_path, Book(title="Dune", author="Frank Herbert"))
+
+    books = list_books(db_path, sort_by="title")
+
+    assert books[0].title == "Dune"
+    assert books[1].title == "Neuromancer"
