@@ -1,0 +1,21 @@
+[project]
+name = "bookshelf"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "click>=8.3.1",
+]
+
+[project.scripts]
+bookshelf = "bookshelf.cli:cli"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
