@@ -130,3 +130,17 @@ def test_update_command_invalid_book_id(tmp_path: Path):
     assert result.exit_code == 1
     assert "No book with id 999" in result.output
 
+def test_search_command_invalid_field(tmp_path: Path):
+    db_path = str(tmp_path / "test.db")
+    runner = CliRunner()
+    runner.invoke(cli, [
+        "--db", db_path, "add",
+        "--title", "Dune", "--author", "Frank Herbert",
+    ])
+
+    result = runner.invoke(cli, [
+        "--db", db_path, "search", "Dune", "--field", "banana",
+    ])
+
+    assert result.exit_code == 1
+    assert "Invalid search column" in result.output

@@ -88,9 +88,14 @@ def update(ctx: click.Context, book_id: int, **kwargs: str | None) -> None:
 @click.pass_context
 def search(ctx: click.Context, term: str, field: str | None) -> None:
     """Search books by keyword across all text fields."""
-    books = search_books(ctx.obj["db_path"], term, field=field)
-    if not books:
-        click.echo(f"No books matching '{term}'.")
-        return
-    for book in books:
-        click.echo(f"[{book.id}] {book.title} by {book.author} ({book.status}) genre:{book.genre}")
+    try:
+        books = search_books(ctx.obj["db_path"], term, field=field)
+    except InvalidColumnError as e:
+        click.echo(str(e))
+        ctx.exit(1)
+    else:
+        if not books:
+            click.echo(f"No books matching '{term}'.")
+            return
+        for book in books:
+            click.echo(f"[{book.id}] {book.title} by {book.author} ({book.status}) genre:{book.genre}")
