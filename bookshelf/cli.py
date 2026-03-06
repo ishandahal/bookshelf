@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from bookshelf.db import add_book, init_db, list_books, update_book
+from bookshelf.db import add_book, init_db, list_books, search_books, update_book
 from bookshelf.models import VALID_STATUSES, Book
 
 DEFAULT_DB = Path.home() / ".bookshelf.db"
@@ -77,3 +77,15 @@ def update(ctx: click.Context, book_id: int, **kwargs: str | None) -> None:
     update_book(ctx.obj["db_path"], book_id, changes)
     summary = ", ".join(f"{k}='{v}'" for k, v in changes.items())
     click.echo(f"Updated book #{book_id}: {summary}")
+@cli.command()
+@click.argument("term")
+@click.option("--field", default=None, help="Limit search to a specific field.")
+@click.pass_context
+def search(ctx: click.Context, term: str, field: str | None) -> None:
+    """Search books by keyword across all text fields."""
+    books = search_books(ctx.obj["db_path"], term, field=field)
+    if not books:
+        click.echo(f"No books matching '{term}'.")
+        return
+    for book in books:
+        click.echo(f"[{book.id}] {book.title} by {book.author} ({book.status}) genre:{book.genre}")

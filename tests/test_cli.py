@@ -82,3 +82,36 @@ def test_update_command_no_options(tmp_path: Path):
 
     assert result.exit_code == 0
     assert "Nothing to update" in result.output
+
+
+def test_search_command(tmp_path: Path):
+    db_path = str(tmp_path / "test.db")
+    runner = CliRunner()
+    runner.invoke(cli, [
+        "--db", db_path, "add",
+        "--title", "Dune", "--author", "Frank Herbert", "--genre", "sci-fi",
+    ])
+    runner.invoke(cli, [
+        "--db", db_path, "add",
+        "--title", "1984", "--author", "George Orwell",
+    ])
+
+    result = runner.invoke(cli, ["--db", db_path, "search", "Dune"])
+
+    assert result.exit_code == 0
+    assert "Dune" in result.output
+    assert "1984" not in result.output
+
+
+def test_search_command_no_results(tmp_path: Path):
+    db_path = str(tmp_path / "test.db")
+    runner = CliRunner()
+    runner.invoke(cli, [
+        "--db", db_path, "add",
+        "--title", "Dune", "--author", "Frank Herbert",
+    ])
+
+    result = runner.invoke(cli, ["--db", db_path, "search", "nonexistent"])
+
+    assert result.exit_code == 0
+    assert "No books matching" in result.output
