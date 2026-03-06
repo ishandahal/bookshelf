@@ -2,7 +2,7 @@ from pathlib import Path
 
 import click
 
-from bookshelf.db import add_book, init_db, list_books
+from bookshelf.db import add_book, init_db, list_books, update_book
 from bookshelf.models import VALID_STATUSES, Book
 
 DEFAULT_DB = Path.home() / ".bookshelf.db"
@@ -52,3 +52,28 @@ def list_cmd(ctx: click.Context, status: str | None, genre: str | None, sort_by:
         return
     for book in books:
         click.echo(f"[{book.id}] {book.title} by {book.author} ({book.status}) genre:{book.genre}")
+
+
+@cli.command()
+@click.argument("book_id", type=int)
+@click.option("--title", default=None, help="Book title.")
+@click.option("--author", default=None, help="Book author.")
+@click.option(
+    "--status",
+    type=click.Choice(VALID_STATUSES, case_sensitive=False),
+    default=None,
+    help="Reading status.",
+)
+@click.option("--genre", default=None, help="Book genre.")
+@click.option("--notes", default=None, help="Short notes.")
+@click.option("--source", default=None, help="Where you heard about it.")
+@click.pass_context
+def update(ctx: click.Context, book_id: int, **kwargs: str | None) -> None:
+    """Update a book on your shelf by ID."""
+    changes = {k: v for k, v in kwargs.items() if v is not None}
+    if not changes:
+        click.echo("Nothing to update — provide at least one option.")
+        return
+    update_book(ctx.obj["db_path"], book_id, changes)
+    summary = ", ".join(f"{k}='{v}'" for k, v in changes.items())
+    click.echo(f"Updated book #{book_id}: {summary}")
