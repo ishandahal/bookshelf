@@ -16,3 +16,11 @@ class Book:
     added_at: str = field(default_factory=lambda: datetime.now().isoformat())
     updated_at: str = field(default_factory=lambda: datetime.now().isoformat())
     id: int | None = None
+
+
+class InvalidColumnError(Exception):
+    pass
+
+
+class BookNotFoundError(Exception):
+    pass

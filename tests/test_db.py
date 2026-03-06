@@ -1,8 +1,9 @@
+import pytest
 import sqlite3
 from pathlib import Path
 
 from bookshelf.db import add_book, init_db, list_books, search_books, update_book
-from bookshelf.models import Book
+from bookshelf.models import Book, BookNotFoundError, InvalidColumnError
 
 
 def test_init_db_creates_books_table(tmp_path: Path):
@@ -125,6 +126,27 @@ def test_update_book_multiple_fields(tmp_path: Path):
 
     assert row == ("read", "classic sci-fi", "Loved it")
 
+
+def test_update_book_invalid_column(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    init_db(db_path)
+
+    book = Book(title="Dune", author="Frank Herbert", genre="sci-fi")
+    book_id = add_book(db_path, book)
+
+    with pytest.raises(InvalidColumnError):
+        update_book(db_path, book_id, {"invalid column": "Jack Boyle"})
+
+
+def test_update_book_invalid_book_id(tmp_path: Path):
+    db_path = tmp_path / "test.db"
+    init_db(db_path)
+
+    book = Book(title="Dune", author="Frank Herbert", genre="sci-fi")
+    add_book(db_path, book)
+
+    with pytest.raises(BookNotFoundError):
+        update_book(db_path, 999, {"author": "Jack Boyle"})
 
 def test_search_books(tmp_path: Path):
     db_path = tmp_path / "test.db"

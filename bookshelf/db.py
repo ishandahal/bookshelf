@@ -2,7 +2,7 @@ import sqlite3
 from datetime import datetime
 from pathlib import Path
 
-from bookshelf.models import Book
+from bookshelf.models import Book, BookNotFoundError, InvalidColumnError
 
 # Module-level column whitelists: these are security boundaries that guard
 # against SQL injection in dynamically built queries (ORDER BY / SET clauses).
@@ -131,7 +131,7 @@ def update_book(db_path: Path, book_id: int, book: dict) -> None:
     """
     for col in book:
         if col not in UPDATABLE_COLUMNS:
-            raise ValueError(f"Invalid update column: {col}")
+            raise InvalidColumnError(f"Invalid update column: {col}")
 
     updated_book = {**book, "updated_at": datetime.now().isoformat()}
     set_clauses = [f"{key} = :{key}" for key in updated_book]
@@ -141,7 +141,10 @@ def update_book(db_path: Path, book_id: int, book: dict) -> None:
 
     conn = sqlite3.connect(db_path)
     params = {**updated_book, "id": book_id}
-    conn.execute(sql_statement, params)
+    cursor = conn.execute(sql_statement, params)
+    if cursor.rowcount == 0:
+        conn.close()
+        raise BookNotFoundError(f"No book with id {book_id}")
     conn.commit()
     conn.close()
 
