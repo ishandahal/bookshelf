@@ -21,21 +21,23 @@ def init_db(db_path: Path) -> None:
         db_path: Path to the SQLite database file.
     """
     conn = sqlite3.connect(db_path)
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS books (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            author TEXT NOT NULL,
-            status TEXT NOT NULL DEFAULT 'want-to-read',
-            genre TEXT NOT NULL DEFAULT '',
-            notes TEXT NOT NULL DEFAULT '',
-            source TEXT NOT NULL DEFAULT '',
-            added_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL
-        )
-    """)
-    conn.commit()
-    conn.close()
+    try:
+        with conn:
+            conn.execute("""
+                CREATE TABLE IF NOT EXISTS books (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    title TEXT NOT NULL,
+                    author TEXT NOT NULL,
+                    status TEXT NOT NULL DEFAULT 'want-to-read',
+                    genre TEXT NOT NULL DEFAULT '',
+                    notes TEXT NOT NULL DEFAULT '',
+                    source TEXT NOT NULL DEFAULT '',
+                    added_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+            """)
+    finally:
+        conn.close()
 
 
 def add_book(db_path: Path, book: Book) -> int:
@@ -49,26 +51,28 @@ def add_book(db_path: Path, book: Book) -> int:
         The ID of the newly inserted book.
     """
     conn = sqlite3.connect(db_path)
-    cursor = conn.execute(
-        """
-        INSERT INTO books (title, author, status, genre, notes, source, added_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        """,
-        (
-            book.title,
-            book.author,
-            book.status,
-            book.genre,
-            book.notes,
-            book.source,
-            book.added_at,
-            book.updated_at,
-        ),
-    )
-    conn.commit()
-    # lastrowid is always set after INSERT but typed as int | None in stubs
-    book_id = cast(int, cursor.lastrowid)
-    conn.close()
+    try:
+        with conn:
+            cursor = conn.execute(
+                """
+                INSERT INTO books (title, author, status, genre, notes, source, added_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    book.title,
+                    book.author,
+                    book.status,
+                    book.genre,
+                    book.notes,
+                    book.source,
+                    book.added_at,
+                    book.updated_at,
+                ),
+            )
+            # lastrowid is always set after INSERT but typed as int | None in stubs
+            book_id = cast(int, cursor.lastrowid)
+    finally:
+        conn.close()
     return book_id
 
 
@@ -112,8 +116,10 @@ def list_books(
     query += f" ORDER BY {sort_by}"
 
     conn = sqlite3.connect(db_path)
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
+    try:
+        rows = conn.execute(query, params).fetchall()
+    finally:
+        conn.close()
 
     return [
         Book(
@@ -157,13 +163,14 @@ def update_book(db_path: Path, book_id: int, book: dict) -> None:
     sql_statement = f"UPDATE books SET {set_clause} WHERE id=:id"
 
     conn = sqlite3.connect(db_path)
-    params = {**updated_book, "id": book_id}
-    cursor = conn.execute(sql_statement, params)
-    if cursor.rowcount == 0:
+    try:
+        with conn:
+            params = {**updated_book, "id": book_id}
+            cursor = conn.execute(sql_statement, params)
+            if cursor.rowcount == 0:
+                raise BookNotFoundError(f"No book with id {book_id}")
+    finally:
         conn.close()
-        raise BookNotFoundError(f"No book with id {book_id}")
-    conn.commit()
-    conn.close()
 
 
 def delete_book(db_path: Path, book_id: int) -> None:
@@ -177,14 +184,13 @@ def delete_book(db_path: Path, book_id: int) -> None:
         BookNotFoundError: If no book with the given ID exists.
     """
     conn = sqlite3.connect(db_path)
-    cursor = conn.execute("DELETE FROM books WHERE id=:id", {"id": book_id})
-
-    if cursor.rowcount == 0:
+    try:
+        with conn:
+            cursor = conn.execute("DELETE FROM books WHERE id=:id", {"id": book_id})
+            if cursor.rowcount == 0:
+                raise BookNotFoundError(f"No book with id {book_id}")
+    finally:
         conn.close()
-        raise BookNotFoundError(f"No book with id {book_id}")
-
-    conn.commit()
-    conn.close()
 
 
 def search_books(
@@ -223,8 +229,10 @@ def search_books(
     query = f"SELECT {BOOK_COLUMNS} FROM books {where_clause} ORDER BY added_at"
 
     conn = sqlite3.connect(db_path)
-    rows = conn.execute(query, params).fetchall()
-    conn.close()
+    try:
+        rows = conn.execute(query, params).fetchall()
+    finally:
+        conn.close()
 
     return [
         Book(
